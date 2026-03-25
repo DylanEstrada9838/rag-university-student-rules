@@ -1,0 +1,22 @@
+# Virtual environment
+venv/
+
+# Environment variables (contains secrets)
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Chroma vector database (rebuilt from source PDF)
+chroma_db/
+testing/chroma_db/
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+Thumbs.db
+.DS_Store

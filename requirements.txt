@@ -1,0 +1,12 @@
+langchain-classic
+langchain-community
+langchain-core
+langchain-huggingface
+langchain-text-splitters
+langchain-experimental
+langchain-chroma
+chromadb
+sentence-transformers
+PyMuPDF
+rank-bm25
+python-dotenv
