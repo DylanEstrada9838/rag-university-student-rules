@@ -38,7 +38,6 @@ def get_reranker_retriever(base_retriever, top_n=3):
     """
     model = HuggingFaceCrossEncoder(
         # BAAI/bge-reranker-v2-m3 is excellent for multilingual queries
-        # cross-encoder/mmarco-mMiniLMv2-L12-H384-v1 is another faster option
         model_name="BAAI/bge-reranker-v2-m3",
         model_kwargs={"device": "cpu"}
     )

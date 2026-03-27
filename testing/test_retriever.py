@@ -7,7 +7,6 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 # Add the parent directory to sys.path to easily import the loader module
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from embeddings import get_embeddings
 from vectorstore import load_vectorstore
 from retriever import get_hybrid_retriever, get_reranker_retriever
 from chunking import get_chunks
