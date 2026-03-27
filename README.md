@@ -9,6 +9,7 @@ A Retrieval-Augmented Generation (RAG) system built to query and retrieve inform
 - **Hybrid retrieval** – Combines dense vector search (MMR) with sparse keyword search (BM25) via `EnsembleRetriever`.
 - **Cross-encoder reranking** – Applies a multilingual reranker (`BAAI/bge-reranker-v2-m3`) for higher-precision top-k results.
 - **Chroma vector store** – Persists embeddings locally for fast repeated queries.
+- **Local LLM Output** – Leverages `Ollama` (Llama 3) locally to synthesize concise, context-aware answers natively through LangChain runnables.
 
 ## Project Structure
 
@@ -19,9 +20,11 @@ A Retrieval-Augmented Generation (RAG) system built to query and retrieve inform
 ├── embeddings.py       # HuggingFace embedding model configuration
 ├── vectorstore.py      # Create and load Chroma vector store
 ├── retriever.py        # Base, hybrid, and reranker retriever builders
+├── llm.py              # LLM integration and full RAG generation chain
 ├── testing/
 │   ├── test_loader.py      # Test PDF loading pipeline
-│   └── test_retriever.py   # Test full retrieval pipeline
+│   ├── test_retriever.py   # Test full retrieval pipeline
+│   └── test_llm.py         # Test standalone LLM and full RAG flow
 ├── documento/
 │   └── reglamento-general-estudiantes-esp.pdf
 ├── requirements.txt
@@ -72,7 +75,16 @@ HF_TOKEN=hf_your_actual_token_here
 
 You can get a free token at [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens).
 
-### 5. Build the vector database
+### 5. Install Ollama for Local Generation
+
+This project uses [Ollama](https://ollama.com/) for entirely local LLM generation. 
+1. Install Ollama according to your operating system.
+2. Download and run the `llama3` model:
+```bash
+ollama run llama3
+```
+
+### 6. Build the vector database
 
 Open a Python shell or create a script:
 
@@ -84,23 +96,28 @@ create_vector_db()
 
 This will process the PDF, chunk it, generate embeddings, and persist the Chroma database in the `chroma_db/` folder.
 
-### 6. Test the retrieval pipeline
+### 7. Run Tests
 
+Test the retriever logic to ensure chunks load correctly:
 ```bash
 python testing/test_retriever.py
+```
+
+Test the full RAG generation pipeline using the LLM:
+```bash
+python testing/test_llm.py
 ```
 
 ## Usage Example
 
 ```python
-from embeddings import get_embeddings
 from vectorstore import load_vectorstore
 from retriever import get_hybrid_retriever, get_reranker_retriever
 from chunking import get_chunks
+from llm import get_rag_chain
 
 chunks = get_chunks()
-embeddings = get_embeddings()
-vectorstore = load_vectorstore(embeddings)
+vectorstore = load_vectorstore()
 
 # Build the retriever
 retriever = get_reranker_retriever(
@@ -108,10 +125,14 @@ retriever = get_reranker_retriever(
     top_n=3
 )
 
+# Build the final LLM-powered chain
+chain = get_rag_chain(retriever)
+
 # Query
-docs = retriever.invoke("¿Qué implica la baja definitiva de un estudiante?")
-for doc in docs:
-    print(doc.page_content)
+query = "¿Qué implica la baja definitiva de un estudiante?"
+response = chain.invoke(query)
+
+print(response)
 ```
 
 ## Tech Stack
@@ -124,4 +145,5 @@ for doc in docs:
 | Vector Store | `ChromaDB` |
 | Sparse Retrieval | `BM25Retriever` (`rank-bm25`) |
 | Reranker | `BAAI/bge-reranker-v2-m3` |
+| Local LLM | `Ollama` (`llama3`) |
 | Orchestration | `LangChain` |
