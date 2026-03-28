@@ -96,16 +96,15 @@ ollama run llama3
 ```python
 from vectorstore import create_vector_db
 
-# Default semantic chunking → creates chroma_db_v1/
+# Default recursive chunking → creates chroma_db_v1/
 vectorstore, persist_dir, chunks = create_vector_db()
 
 # Or with custom chunking config:
 vectorstore, persist_dir, chunks = create_vector_db(
     chunking_config={
-        "method": "semantic",
-        "breakpoint_threshold_type": "percentile",
-        "breakpoint_threshold_amount": 80,
-        "min_chunk_size": 100,
+        "method": "recursive",
+        "chunk_size": 512,
+        "chunk_overlap": 128,
     }
 )
 ```
@@ -134,7 +133,11 @@ python testing/test_best_retriever.py
 Find the best chunking + retriever configuration automatically:
 
 ```bash
+# Create new versioned vectorstores
 python testing/grid_search.py
+
+# Or reuse existing vectorstores to save time
+python testing/grid_search.py --reuse
 ```
 
 This evaluates combinations of:
@@ -147,15 +150,15 @@ Uses **random search** (20 samples) when total combos exceed the threshold. Resu
 
 | Metric | Value |
 |--------|-------|
-| Hit Rate | 70.00% |
-| MRR | 0.1460 |
-| Recall | 65.00% |
+| Hit Rate | 90.00% |
+| MRR | 0.7333 |
+| Recall | 85.00% |
 
 | Parameter | Value |
 |-----------|-------|
-| Chunking | Semantic (percentile=80, min_chunk_size=100) |
-| Retriever | Hybrid (k=10, fetch_k=20, λ=0.5, weights=[0.7, 0.3]) |
-| Vector Store | `chroma_db_v15` |
+| Chunking | Recursive (chunk_size=512, chunk_overlap=128) |
+| Retriever | Reranker + Hybrid (k=10, fetch_k=20, λ=0.3, weights=[0.6, 0.4], top_n=5) |
+| Vector Store | `testing/chroma_db_v3` |
 
 ## Usage Example
 
@@ -171,7 +174,7 @@ vectorstore = load_vectorstore()
 # Build the retriever
 retriever = get_reranker_retriever(
     get_hybrid_retriever(vectorstore, chunks),
-    top_n=3
+    top_n=5
 )
 
 # Build the final LLM-powered chain
