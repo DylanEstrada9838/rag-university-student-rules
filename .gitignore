@@ -8,15 +8,39 @@ venv/
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
 
-# Chroma vector database (rebuilt from source PDF)
+# Chroma vector databases (all versions – rebuilt from source PDF)
 chroma_db/
+chroma_db_v*/
 testing/chroma_db/
 
-# IDE
+# Grid search results (generated output)
+testing/grid_search_results.json
+
+# IDE / Editor
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
 # OS files
 Thumbs.db
 .DS_Store
+desktop.ini
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# HuggingFace model cache (if downloaded locally)
+.cache/
+
+# Logs
+*.log

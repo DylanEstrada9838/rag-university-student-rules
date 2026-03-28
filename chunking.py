@@ -6,26 +6,75 @@ from document import get_doc
 embeddings = get_embeddings()
 
 
-def chunker(doc):
+def recursive_chunker(doc, chunk_size=512, chunk_overlap=64, separators=None):
+    """
+    Split documents using RecursiveCharacterTextSplitter.
 
-    # text_splitter = RecursiveCharacterTextSplitter(
-    #     chunk_size=512,
-    #     chunk_overlap = 64,
-    #     length_function = len,
-    #     separators=["\n\n", "\n", " ", ""],
-    # )
+    Args:
+        doc:           list of Document objects
+        chunk_size:    maximum size of each chunk (default 512)
+        chunk_overlap: overlap between consecutive chunks (default 64)
+        separators:    list of separator strings (default ["\n\n", "\n", " ", ""])
+    """
+    if separators is None:
+        separators = ["\n\n", "\n", " ", ""]
 
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        length_function=len,
+        separators=separators,
+    )
+    return splitter.split_documents(doc)
+
+
+def semantic_chunker(doc, breakpoint_threshold_type="percentile",
+                     breakpoint_threshold_amount=95, min_chunk_size=200):
+    """
+    Split documents using SemanticChunker.
+
+    Args:
+        doc:                          list of Document objects
+        breakpoint_threshold_type:    "percentile", "standard_deviation", or "interquartile"
+        breakpoint_threshold_amount:  numeric threshold value (default 95)
+        min_chunk_size:               minimum characters per chunk (default 200)
+    """
     splitter = SemanticChunker(
         embeddings,
-        breakpoint_threshold_type="percentile",
-        breakpoint_threshold_amount=95,
-        min_chunk_size=200
+        breakpoint_threshold_type=breakpoint_threshold_type,
+        breakpoint_threshold_amount=breakpoint_threshold_amount,
+        min_chunk_size=min_chunk_size,
     )
-    chunks = splitter.split_documents(doc)
-    return chunks
+    return splitter.split_documents(doc)
 
 
-def get_chunks():
+def get_chunks(chunking_config=None):
+    """
+    Load the document and chunk it according to chunking_config.
+
+    chunking_config dict keys:
+        method: "recursive" | "semantic"  (default: "semantic")
+        + any kwargs accepted by the corresponding chunker function.
+    """
+    if chunking_config is None:
+        chunking_config = {}
+
     doc = get_doc()
-    chunks = chunker(doc)
-    return chunks
+    method = chunking_config.get("method", "semantic")
+
+    if method == "recursive":
+        return recursive_chunker(
+            doc,
+            chunk_size=chunking_config.get("chunk_size", 512),
+            chunk_overlap=chunking_config.get("chunk_overlap", 64),
+            separators=chunking_config.get("separators"),
+        )
+    elif method == "semantic":
+        return semantic_chunker(
+            doc,
+            breakpoint_threshold_type=chunking_config.get("breakpoint_threshold_type", "percentile"),
+            breakpoint_threshold_amount=chunking_config.get("breakpoint_threshold_amount", 95),
+            min_chunk_size=chunking_config.get("min_chunk_size", 200),
+        )
+    else:
+        raise ValueError(f"Unknown chunking method: {method}")

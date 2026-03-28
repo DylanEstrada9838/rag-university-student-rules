@@ -5,30 +5,37 @@ A Retrieval-Augmented Generation (RAG) system built to query and retrieve inform
 ## Features
 
 - **PDF loading & preprocessing** – Loads the regulation PDF, removes headers, page numbers, blank pages, and the index page.
-- **Semantic chunking** – Uses `SemanticChunker` for intelligent document splitting based on embedding similarity.
+- **Configurable chunking** – Supports both `RecursiveCharacterTextSplitter` and `SemanticChunker`, selectable via config dict.
 - **Hybrid retrieval** – Combines dense vector search (MMR) with sparse keyword search (BM25) via `EnsembleRetriever`.
 - **Cross-encoder reranking** – Applies a multilingual reranker (`BAAI/bge-reranker-v2-m3`) for higher-precision top-k results.
-- **Chroma vector store** – Persists embeddings locally for fast repeated queries.
-- **Local LLM Output** – Leverages `Ollama` (Llama 3) locally to synthesize concise, context-aware answers natively through LangChain runnables.
+- **Versioned Chroma vector store** – Each build creates a new `chroma_db_vN/` directory, making it easy to compare configurations.
+- **Hyperparameter grid search** – Automated evaluation of chunking × retriever combinations with random search support.
+- **Retrieval metrics** – Hit Rate, MRR, and Recall evaluated against a ground truth dataset.
+- **Local LLM output** – Leverages `Ollama` (Llama 3) locally to synthesize concise, context-aware answers via LangChain runnables.
 
 ## Project Structure
 
 ```
-├── document.py         # PDF loading + document processing
-├── process_doc.py      # Text cleaning functions (headers, page numbers, blanks)
-├── chunking.py         # Semantic chunking + get_chunks() helper
-├── embeddings.py       # HuggingFace embedding model configuration
-├── vectorstore.py      # Create and load Chroma vector store
-├── retriever.py        # Base, hybrid, and reranker retriever builders
-├── llm.py              # LLM integration and full RAG generation chain
+├── document.py             # PDF loading + document processing
+├── process_doc.py          # Text cleaning (headers, page numbers, blanks)
+├── chunking.py             # Recursive & semantic chunkers + get_chunks()
+├── embeddings.py           # HuggingFace embedding model configuration
+├── vectorstore.py          # Create versioned & load Chroma vector stores
+├── retriever.py            # Base, hybrid, and reranker retriever builders
+├── llm.py                  # LLM integration and full RAG generation chain
 ├── testing/
-│   ├── test_loader.py      # Test PDF loading pipeline
-│   ├── test_retriever.py   # Test full retrieval pipeline
-│   └── test_llm.py         # Test standalone LLM and full RAG flow
+│   ├── ground_truth.py         # Ground truth Q&A pairs (metadata pages)
+│   ├── retrieval_metrics.py    # Hit Rate, MRR, Recall metrics
+│   ├── grid_search.py          # Hyperparameter grid/random search
+│   ├── test_best_retriever.py  # Evaluate the best configuration
+│   ├── evaluation_retriever.py # Single-config retriever evaluation
+│   ├── test_loader.py          # Test PDF loading pipeline
+│   ├── test_retriever.py       # Test full retrieval pipeline
+│   └── test_llm.py             # Test standalone LLM and full RAG flow
 ├── documento/
 │   └── reglamento-general-estudiantes-esp.pdf
 ├── requirements.txt
-├── .env.example        # Template for environment variables
+├── .env.example            # Template for environment variables
 └── .gitignore
 ```
 
@@ -86,27 +93,69 @@ ollama run llama3
 
 ### 6. Build the vector database
 
-Open a Python shell or create a script:
-
 ```python
 from vectorstore import create_vector_db
 
-create_vector_db()
+# Default semantic chunking → creates chroma_db_v1/
+vectorstore, persist_dir, chunks = create_vector_db()
+
+# Or with custom chunking config:
+vectorstore, persist_dir, chunks = create_vector_db(
+    chunking_config={
+        "method": "semantic",
+        "breakpoint_threshold_type": "percentile",
+        "breakpoint_threshold_amount": 80,
+        "min_chunk_size": 100,
+    }
+)
 ```
 
-This will process the PDF, chunk it, generate embeddings, and persist the Chroma database in the `chroma_db/` folder.
+Each call auto-creates a new versioned directory (`chroma_db_v1/`, `chroma_db_v2/`, …).
 
 ### 7. Run Tests
 
-Test the retriever logic to ensure chunks load correctly:
+Test the retriever logic:
 ```bash
 python testing/test_retriever.py
 ```
 
-Test the full RAG generation pipeline using the LLM:
+Test the full RAG generation pipeline:
 ```bash
 python testing/test_llm.py
 ```
+
+Evaluate retrieval with the best config:
+```bash
+python testing/test_best_retriever.py
+```
+
+## Hyperparameter Search
+
+Find the best chunking + retriever configuration automatically:
+
+```bash
+python testing/grid_search.py
+```
+
+This evaluates combinations of:
+- **Chunking**: `recursive` (chunk_size, overlap) and `semantic` (threshold type/amount, min size)
+- **Retriever**: `base` (similarity/MMR), `hybrid` (BM25 + dense), `reranker_base`, `reranker_hybrid`
+
+Uses **random search** (20 samples) when total combos exceed the threshold. Results are saved to `testing/grid_search_results.json`.
+
+### Best Configuration Found
+
+| Metric | Value |
+|--------|-------|
+| Hit Rate | 70.00% |
+| MRR | 0.1460 |
+| Recall | 65.00% |
+
+| Parameter | Value |
+|-----------|-------|
+| Chunking | Semantic (percentile=80, min_chunk_size=100) |
+| Retriever | Hybrid (k=10, fetch_k=20, λ=0.5, weights=[0.7, 0.3]) |
+| Vector Store | `chroma_db_v15` |
 
 ## Usage Example
 
@@ -141,8 +190,8 @@ print(response)
 |---|---|
 | PDF Loader | `PyMuPDF` via LangChain |
 | Embeddings | `sentence-transformers/all-MiniLM-L6-v2` |
-| Chunking | `SemanticChunker` (LangChain Experimental) |
-| Vector Store | `ChromaDB` |
+| Chunking | `RecursiveCharacterTextSplitter` / `SemanticChunker` |
+| Vector Store | `ChromaDB` (versioned) |
 | Sparse Retrieval | `BM25Retriever` (`rank-bm25`) |
 | Reranker | `BAAI/bge-reranker-v2-m3` |
 | Local LLM | `Ollama` (`llama3`) |
