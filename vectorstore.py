@@ -52,5 +52,5 @@ def create_vector_db(chunking_config=None, persist_dir=None):
     return vectorstore, persist_dir, chunks
 
 
-def load_vectorstore(persist_dir="./chroma_db"):
+def load_vectorstore(persist_dir="./chroma_db_v15"):
     return Chroma(persist_directory=persist_dir, embedding_function=get_embeddings())

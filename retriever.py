@@ -15,14 +15,14 @@ def get_base_retriever(vectorstore):
 
 def get_hybrid_retriever(vectorstore,chunks):
     vec_retriever = vectorstore.as_retriever(
-        search_kwargs={"k": 5}, 
+        search_kwargs={"k": 10}, 
         search_type="mmr",
-        fetch_k=15,
+        fetch_k=20,
         lambda_mult=0.5,
         )
     bm25_retriever = BM25Retriever.from_documents(
         documents=chunks,
-        k=5,
+        k=10,
         k1=1.2,
         b=0.75,
     )

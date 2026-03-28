@@ -29,15 +29,15 @@ def recursive_chunker(doc, chunk_size=512, chunk_overlap=64, separators=None):
 
 
 def semantic_chunker(doc, breakpoint_threshold_type="percentile",
-                     breakpoint_threshold_amount=95, min_chunk_size=200):
+                     breakpoint_threshold_amount=80, min_chunk_size=100):
     """
     Split documents using SemanticChunker.
 
     Args:
         doc:                          list of Document objects
         breakpoint_threshold_type:    "percentile", "standard_deviation", or "interquartile"
-        breakpoint_threshold_amount:  numeric threshold value (default 95)
-        min_chunk_size:               minimum characters per chunk (default 200)
+        breakpoint_threshold_amount:  numeric threshold value (default 80)
+        min_chunk_size:               minimum characters per chunk (default 100)
     """
     splitter = SemanticChunker(
         embeddings,
@@ -73,8 +73,8 @@ def get_chunks(chunking_config=None):
         return semantic_chunker(
             doc,
             breakpoint_threshold_type=chunking_config.get("breakpoint_threshold_type", "percentile"),
-            breakpoint_threshold_amount=chunking_config.get("breakpoint_threshold_amount", 95),
-            min_chunk_size=chunking_config.get("min_chunk_size", 200),
+            breakpoint_threshold_amount=chunking_config.get("breakpoint_threshold_amount", 80),
+            min_chunk_size=chunking_config.get("min_chunk_size", 100),
         )
     else:
         raise ValueError(f"Unknown chunking method: {method}")
