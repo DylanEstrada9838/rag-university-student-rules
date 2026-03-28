@@ -17,6 +17,7 @@ testing/chroma_db/
 
 # Grid search results (generated output)
 testing/grid_search_results.json
+testing/grid_search.py
 
 # IDE / Editor
 .vscode/

@@ -9,9 +9,13 @@ Evaluates different combinations of:
 Uses random search when the full grid is too large (> MAX_COMBOS).
 Results are sorted by Hit Rate → MRR → Recall and printed as a table.
 
+Supports two modes:
+    --reuse    Reuse existing chroma_db_vN directories (skip vectorstore creation)
+    (default)  Create new versioned vectorstores from scratch
+
 Usage:
-    python -m testing.grid_search          (from the project root)
-    python testing/grid_search.py          (from the project root)
+    python testing/grid_search.py              (create new vectorstores)
+    python testing/grid_search.py --reuse      (reuse existing ones)
 """
 
 import os
@@ -24,11 +28,15 @@ import time
 from datetime import datetime
 
 # ── path setup ────────────────────────────────────────────────────────────
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from dotenv import load_dotenv
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+sys.path.append(PROJECT_DIR)
 
-from vectorstore import create_vector_db
+from dotenv import load_dotenv
+load_dotenv(os.path.join(PROJECT_DIR, ".env"))
+
+from vectorstore import create_vector_db, load_vectorstore
+from chunking import get_chunks
 from retriever import get_base_retriever, get_hybrid_retriever, get_reranker_retriever
 from ground_truth import ground_truth
 from retrieval_metrics import hit_rate, mrr, recall
@@ -37,6 +45,8 @@ from retrieval_metrics import hit_rate, mrr, recall
 MAX_COMBOS = 20          # If total combos exceed this, switch to random search
 RANDOM_SEED = 42
 random.seed(RANDOM_SEED)
+
+REUSE_MODE = "--reuse" in sys.argv
 
 # ══════════════════════════════════════════════════════════════════════════
 # 1.  PARAMETER GRID
@@ -57,8 +67,6 @@ chunking_grid = [
 ]
 
 # --- Retriever configs --------------------------------------------------
-# Each entry: (label, builder_function_key, kwargs)
-#   builder_function_key:  "base" | "hybrid" | "reranker_base" | "reranker_hybrid"
 retriever_grid = [
     # ---- Base (similarity) ----
     {"type": "base", "search_type": "similarity", "k": 4},
@@ -145,6 +153,11 @@ def _build_retriever(vectorstore, chunks, retriever_config):
         raise ValueError(f"Unknown retriever type: {rtype}")
 
 
+def _chunking_key(cfg):
+    """Stable string key for a chunking config (for caching)."""
+    return json.dumps(cfg, sort_keys=True)
+
+
 # ══════════════════════════════════════════════════════════════════════════
 # 3.  EVALUATION
 # ══════════════════════════════════════════════════════════════════════════
@@ -203,13 +216,40 @@ def main():
     use_random = total > MAX_COMBOS
     if use_random:
         combos = random.sample(all_combos, MAX_COMBOS)
-        print(f"\n⚡ {total} total combos → using RANDOM SEARCH with {MAX_COMBOS} samples (seed={RANDOM_SEED})\n")
+        print(f"\n⚡ {total} total combos → using RANDOM SEARCH with {MAX_COMBOS} samples (seed={RANDOM_SEED})")
     else:
         combos = all_combos
-        print(f"\n🔍 Running FULL GRID SEARCH over {total} combinations\n")
+        print(f"\n🔍 Running FULL GRID SEARCH over {total} combinations")
+
+    if REUSE_MODE:
+        print("♻️  REUSE MODE: Loading existing chroma_db_vN directories (no new vectorstores created)\n")
+    else:
+        print("🆕  CREATE MODE: Creating new versioned vectorstores\n")
+
+    # ── In reuse mode, pre-build chunking → (vectorstore, chunks, dir) cache ──
+    # We assign each unique chunking config a stable version number (1-indexed
+    # in the order they appear in chunking_grid) so the mapping is deterministic.
+    chunking_cache = {}  # key: _chunking_key(cfg) → (vectorstore, chunks, persist_dir)
+
+    if REUSE_MODE:
+        # Build the mapping: chunking_grid index → chroma_db_v{index+1}
+        for i, cfg in enumerate(chunking_grid):
+            version = i + 1
+            persist_dir = os.path.join(SCRIPT_DIR, f"chroma_db_v{version}")
+            if not os.path.exists(persist_dir):
+                print(f"  ⚠️  {persist_dir} not found – will create it")
+                vectorstore, persist_dir, chunks = create_vector_db(
+                    chunking_config=cfg, persist_dir=persist_dir
+                )
+            else:
+                print(f"  ✓ Loading {persist_dir}")
+                vectorstore = load_vectorstore(persist_dir=persist_dir)
+                chunks = get_chunks(cfg)
+            chunking_cache[_chunking_key(cfg)] = (vectorstore, chunks, persist_dir)
+        print()
 
     all_results = []
-    chroma_dirs_created = []
+    chroma_dirs_used = []
 
     for idx, (chunking_cfg, retriever_cfg) in enumerate(combos, start=1):
         c_label, r_label = _short_label(chunking_cfg, retriever_cfg)
@@ -219,9 +259,23 @@ def main():
         try:
             t0 = time.time()
 
-            # 1. Create vectorstore (auto-versioned)
-            vectorstore, persist_dir, chunks = create_vector_db(chunking_config=chunking_cfg)
-            chroma_dirs_created.append(persist_dir)
+            key = _chunking_key(chunking_cfg)
+
+            if REUSE_MODE:
+                # Use cached vectorstore
+                vectorstore, chunks, persist_dir = chunking_cache[key]
+            else:
+                # Check if we already created this chunking config in this run
+                if key in chunking_cache:
+                    vectorstore, chunks, persist_dir = chunking_cache[key]
+                else:
+                    vectorstore, persist_dir, chunks = create_vector_db(
+                        chunking_config=chunking_cfg
+                    )
+                    chunking_cache[key] = (vectorstore, chunks, persist_dir)
+
+            if persist_dir not in chroma_dirs_used:
+                chroma_dirs_used.append(persist_dir)
             print(f"  → vectorstore: {persist_dir}  ({len(chunks)} chunks)")
 
             # 2. Build retriever
@@ -240,7 +294,9 @@ def main():
             print(f"  → Hit Rate: {metrics['hit_rate']:.2%}  |  MRR: {metrics['mrr']:.4f}  |  Recall: {metrics['recall']:.2%}  ({elapsed:.1f}s)")
 
         except Exception as e:
+            import traceback
             print(f"  ✗ ERROR: {e}")
+            traceback.print_exc()
 
         print()
 
@@ -259,7 +315,7 @@ def main():
         print(f"{i:>3}  {r['hit_rate']:>8.2%}  {r['mrr']:>8.4f}  {r['recall']:>8.2%}  {r['time_s']:>5.1f}s  {c_label:<55}  {r_label}")
 
     # ── Save full results to JSON ─────────────────────────────────────────
-    results_path = os.path.join(os.path.dirname(__file__), "grid_search_results.json")
+    results_path = os.path.join(SCRIPT_DIR, "grid_search_results.json")
     # Convert any non-serializable values
     for r in all_results:
         if "weights" in r.get("retriever", {}):
@@ -282,9 +338,8 @@ def main():
         print(f"  DB path  : {best['persist_dir']}")
         print("=" * 100)
 
-    # ── Cleanup: ask user if they want to keep all vectorstores ───────────
-    print(f"\n📁 Created {len(chroma_dirs_created)} vectorstore directories: {chroma_dirs_created}")
-    print("   You can delete the ones you don't need manually.")
+    # ── Summary ───────────────────────────────────────────────────────────
+    print(f"\n📁 Used {len(chroma_dirs_used)} vectorstore directories: {chroma_dirs_used}")
 
 
 if __name__ == "__main__":

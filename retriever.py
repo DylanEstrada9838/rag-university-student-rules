@@ -18,7 +18,7 @@ def get_hybrid_retriever(vectorstore,chunks):
         search_kwargs={"k": 10}, 
         search_type="mmr",
         fetch_k=20,
-        lambda_mult=0.5,
+        lambda_mult=0.3,
         )
     bm25_retriever = BM25Retriever.from_documents(
         documents=chunks,
@@ -28,10 +28,10 @@ def get_hybrid_retriever(vectorstore,chunks):
     )
     return EnsembleRetriever(
         retrievers=[vec_retriever, bm25_retriever],
-        weights=[0.7, 0.3],
+        weights=[0.6, 0.4],
     )
 
-def get_reranker_retriever(base_retriever, top_n=3):
+def get_reranker_retriever(base_retriever, top_n=5):
     """
     Wraps an existing retriever with a Cross-Encoder reranker.
     Uses a multilingual model since documents and queries are in Spanish.

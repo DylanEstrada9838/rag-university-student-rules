@@ -2,9 +2,12 @@
 test_best_retriever.py – Evaluate the best retriever configuration found by grid search.
 
 Best config:
-    Chunking : semantic (percentile=80, min_chunk_size=100)
-    Retriever: hybrid (k=10, fetch_k=20, lambda_mult=0.5, weights=[0.7, 0.3])
-    DB path  : ./chroma_db_v15
+  Hit Rate : 90.00%
+  MRR      : 0.7333
+  Recall   : 85.00%
+  Chunking : recursive (chunk_size=512, chunk_overlap=128)
+  Retriever: reranker_hybrid (k=10, fetch_k=20, lambda_mult=0.3, weights=[0.6, 0.4], top_n=5)
+  DB path  : testing/chroma_db_v3
 """
 
 import os
@@ -19,26 +22,27 @@ from langchain_classic.retrievers import EnsembleRetriever
 
 from vectorstore import load_vectorstore
 from chunking import get_chunks
+from retriever import get_reranker_retriever
 from ground_truth import ground_truth
 from retrieval_metrics import hit_rate, mrr, recall
 
 # ── Best configuration ────────────────────────────────────────────────────
 CHUNKING_CONFIG = {
-    "method": "semantic",
-    "breakpoint_threshold_type": "percentile",
-    "breakpoint_threshold_amount": 80,
-    "min_chunk_size": 100,
+    "method": "recursive",
+    "chunk_size": 512,
+    "chunk_overlap": 128,
 }
 
 RETRIEVER_CONFIG = {
-    "type": "hybrid",
+    "type": "reranker_hybrid",
     "k": 10,
     "fetch_k": 20,
-    "lambda_mult": 0.5,
-    "weights": [0.7, 0.3],
+    "lambda_mult": 0.3,
+    "weights": [0.6, 0.4],
+    "top_n": 5,
 }
 
-PERSIST_DIR = os.path.join(os.path.dirname(__file__), '..', 'chroma_db_v15')
+PERSIST_DIR = os.path.join(os.path.dirname(__file__), 'chroma_db_v3')
 
 # ── Setup ──────────────────────────────────────────────────────────────────
 chunks = get_chunks(CHUNKING_CONFIG)
@@ -56,10 +60,12 @@ bm25_retriever = BM25Retriever.from_documents(
     k=RETRIEVER_CONFIG["k"],
 )
 
-retriever = EnsembleRetriever(
+hybrid_retriever = EnsembleRetriever(
     retrievers=[vec_retriever, bm25_retriever],
     weights=RETRIEVER_CONFIG["weights"],
 )
+
+retriever = get_reranker_retriever(hybrid_retriever, top_n=RETRIEVER_CONFIG["top_n"])
 
 # ── Evaluate ───────────────────────────────────────────────────────────────
 results = []

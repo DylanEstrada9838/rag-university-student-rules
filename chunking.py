@@ -6,14 +6,14 @@ from document import get_doc
 embeddings = get_embeddings()
 
 
-def recursive_chunker(doc, chunk_size=512, chunk_overlap=64, separators=None):
+def recursive_chunker(doc, chunk_size=512, chunk_overlap=128, separators=None):
     """
     Split documents using RecursiveCharacterTextSplitter.
 
     Args:
         doc:           list of Document objects
         chunk_size:    maximum size of each chunk (default 512)
-        chunk_overlap: overlap between consecutive chunks (default 64)
+        chunk_overlap: overlap between consecutive chunks (default 128)
         separators:    list of separator strings (default ["\n\n", "\n", " ", ""])
     """
     if separators is None:
@@ -60,13 +60,13 @@ def get_chunks(chunking_config=None):
         chunking_config = {}
 
     doc = get_doc()
-    method = chunking_config.get("method", "semantic")
+    method = chunking_config.get("method", "recursive")
 
     if method == "recursive":
         return recursive_chunker(
             doc,
             chunk_size=chunking_config.get("chunk_size", 512),
-            chunk_overlap=chunking_config.get("chunk_overlap", 64),
+            chunk_overlap=chunking_config.get("chunk_overlap", 128),
             separators=chunking_config.get("separators"),
         )
     elif method == "semantic":
