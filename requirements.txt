@@ -10,4 +10,6 @@ sentence-transformers
 PyMuPDF
 rank-bm25
 python-dotenv
-langchain-ollama
+langchain-groq
+ragas
+datasets

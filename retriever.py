@@ -1,3 +1,5 @@
+import os
+import pickle
 from langchain_community.retrievers import BM25Retriever
 from langchain_classic.retrievers import EnsembleRetriever
 
@@ -20,12 +22,23 @@ def get_hybrid_retriever(vectorstore,chunks):
         fetch_k=20,
         lambda_mult=0.3,
         )
-    bm25_retriever = BM25Retriever.from_documents(
-        documents=chunks,
-        k=10,
-        k1=1.2,
-        b=0.75,
-    )
+    
+    cache_file = "bm25_cache.pkl"
+    if os.path.exists(cache_file):
+        print(f"Loading BM25 from cache: {cache_file}")
+        with open(cache_file, "rb") as f:
+            bm25_retriever = pickle.load(f)
+    else:
+        print("Generating BM25 index...")
+        bm25_retriever = BM25Retriever.from_documents(
+            documents=chunks,
+            k=10,
+            k1=1.2,
+            b=0.75,
+        )
+        with open(cache_file, "wb") as f:
+            pickle.dump(bm25_retriever, f)
+            
     return EnsembleRetriever(
         retrievers=[vec_retriever, bm25_retriever],
         weights=[0.6, 0.4],

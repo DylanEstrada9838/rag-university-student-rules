@@ -1,0 +1,121 @@
+{
+  "config": {
+    "chunking": {
+      "method": "recursive",
+      "chunk_size": 512,
+      "chunk_overlap": 128
+    },
+    "retriever": {
+      "type": "reranker_hybrid",
+      "k": 10,
+      "fetch_k": 20,
+      "lambda_mult": 0.3,
+      "weights": [
+        0.6,
+        0.4
+      ],
+      "top_n": 5
+    },
+    "persist_dir": "C:\\Users\\dylan\\Documents\\Mioti\\Notebooks\\RAG reglamento Tec\\testing\\ragas\\..\\chroma_db_v3"
+  },
+  "aggregate": {
+    "answer_relevancy": 0.25815949453575365,
+    "faithfulness": 0.8888888888888888,
+    "context_precision": 0.8308641975103909,
+    "context_recall": 1.0,
+    "answer_correctness": 0.5297713632576891,
+    "eval_time_s": 24795.93328154087
+  },
+  "per_question": [
+    {
+      "user_input": "¿Qué implica la baja definitiva de un estudiante?",
+      "answer_relevancy": 0.32596073414534293,
+      "faithfulness": 1.0,
+      "context_precision": NaN,
+      "context_recall": 1.0,
+      "answer_correctness": 0.5894500475178761,
+      "eval_time_s": 3850.2562017440796
+    },
+    {
+      "user_input": "¿Cuáles son las consecuencias disciplinarias que se pueden aplicar a un estudiante?",
+      "answer_relevancy": 0.3648465554397071,
+      "faithfulness": NaN,
+      "context_precision": 0.999999999975,
+      "context_recall": NaN,
+      "answer_correctness": NaN,
+      "eval_time_s": 22151.30227971077
+    },
+    {
+      "user_input": "¿Quién puede imponer un condicionamiento a un estudiante?",
+      "answer_relevancy": NaN,
+      "faithfulness": 1.0,
+      "context_precision": 0.99999999998,
+      "context_recall": 1.0,
+      "answer_correctness": 0.5202778960625293,
+      "eval_time_s": 42897.34799361229
+    },
+    {
+      "user_input": "¿Qué son las medidas de protección y cuándo se aplican?",
+      "answer_relevancy": 0.3007072634085374,
+      "faithfulness": NaN,
+      "context_precision": 0.99999999998,
+      "context_recall": 1.0,
+      "answer_correctness": 0.5642589091122127,
+      "eval_time_s": 6506.863168954849
+    },
+    {
+      "user_input": "¿Cómo se conforma un Comité Disciplinario?",
+      "answer_relevancy": 0.227350428882272,
+      "faithfulness": NaN,
+      "context_precision": 0.4777777777618519,
+      "context_recall": 1.0,
+      "answer_correctness": 0.49639596872988334,
+      "eval_time_s": 3897.592711687088
+    },
+    {
+      "user_input": "¿Qué pasa si un estudiante es sorprendido con un arma dentro del campus?",
+      "answer_relevancy": 0.08305025539315161,
+      "faithfulness": NaN,
+      "context_precision": 0.0,
+      "context_recall": NaN,
+      "answer_correctness": NaN,
+      "eval_time_s": 11289.49449467659
+    },
+    {
+      "user_input": "¿Qué pruebas puede presentar un estudiante ante el Comité Disciplinario?",
+      "answer_relevancy": 0.24704172994551088,
+      "faithfulness": NaN,
+      "context_precision": 0.999999999975,
+      "context_recall": 1.0,
+      "answer_correctness": 0.4487718703143467,
+      "eval_time_s": 3753.938767194748
+    },
+    {
+      "user_input": "¿Qué son las medidas de estabilización y cuándo se aplican?",
+      "answer_relevancy": NaN,
+      "faithfulness": NaN,
+      "context_precision": 0.99999999998,
+      "context_recall": 1.0,
+      "answer_correctness": NaN,
+      "eval_time_s": 16457.44332432747
+    },
+    {
+      "user_input": "¿Cuáles son las faltas relacionadas con el consumo de sustancias prohibidas?",
+      "answer_relevancy": NaN,
+      "faithfulness": 0.6666666666666666,
+      "context_precision": 0.999999999975,
+      "context_recall": 1.0,
+      "answer_correctness": NaN,
+      "eval_time_s": 85603.83493185043
+    },
+    {
+      "user_input": "¿Qué es una amonestación y quién puede imponerla?",
+      "answer_relevancy": NaN,
+      "faithfulness": NaN,
+      "context_precision": 0.9999999999666667,
+      "context_recall": 1.0,
+      "answer_correctness": 0.5594734878092864,
+      "eval_time_s": 51551.25894165039
+    }
+  ]
+}

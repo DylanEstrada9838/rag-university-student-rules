@@ -24,8 +24,9 @@ retriever = get_reranker_retriever(get_hybrid_retriever(vectorstore, chunks), to
 chain = get_rag_chain(retriever)
 
 query = "¿Qué implica la baja definitiva de un estudiante?"
-print(f"\nQuery: {query}\n")
+query2 = "¿Qué pasa si un estudiante infrinje el reglamento estando en experiencias internacionales?"
+print(f"\nQuery: {query2}\n")
 
-response = chain.invoke(query)
+response = chain.invoke(query2)
 print("Response:")
 print(response)
